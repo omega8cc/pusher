@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function pusher_menu() {
   $items = array();
@@ -15,15 +15,31 @@ function pusher_menu() {
 }
 
 /**
- * Implementation of hook_nodeapi().
+ * Implements hook_node_insert().
  */
-function pusher_nodeapi($node, $op) {
-  if ($op == 'insert' || $op == 'update') {
+function pusher_node_insert($node) {
+  if (TRUE || TRUE) {
     if ($node->status && $node->promote) {
       pusher_notify($node->nid);
     }
   }
 }
+
+/**
+ * Implements hook_node_update().
+ */
+function pusher_node_update($node) {
+  if (TRUE || TRUE) {
+    if ($node->status && $node->promote) {
+      pusher_notify($node->nid);
+    }
+  }
+}
+
+/**
+ * Implements hook_nodeapi().
+ */
+function pusher_nodeapi_OLD($node, $op) { }
 
 /**
  * Send a notification to all subscribers.
@@ -38,7 +54,7 @@ function pusher_notify($nid) {
  * Page callback for rendering a feed.
  */
 function pusher_feed_page() {
-  drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
+  drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
   print pusher_feed();
 }
 
@@ -50,14 +66,21 @@ function pusher_feed_page() {
 function pusher_feed($nids = FALSE, $channel = array()) {
   global $base_url, $language;
 
+/*
   if ($nids === FALSE) {
     $nids = array();
-    $result = db_query_range(db_rewrite_sql('SELECT n.nid, n.created FROM {node} n WHERE n.promote = 1 AND n.status = 1 ORDER BY n.created DESC'), 0, variable_get('feed_default_items', 10));
+    // TODO Please convert this statement to the D7 database API syntax.
+    $result = db_query_range(db_rewrite_sql('SELECT n.nid, n.created FROM {node} n WHERE n.promote = 1 AND n.status = 1 ORDER BY n.created DESC'));
     while ($row = db_fetch_object($result)) {
       $nids[] = $row->nid;
     }
   }
+*/
+  // TODO filter by $nids
+  $nodes_limit = 10;
+  $nodes = node_get_recent($nodes_limit);
 
+  // TODO feed_item_length meaning = title with/without teaser?
   $item_length = variable_get('feed_item_length', 'teaser');
   $namespaces = array(
     'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
@@ -65,12 +88,16 @@ function pusher_feed($nids = FALSE, $channel = array()) {
   );
 
   $items = '';
-  foreach ($nids as $nid) {
+	dsm($nodes);
+	dsm($item_length);
+	
+  foreach ($nodes as $item) {
     // Load the specified node:
-    $item = node_load($nid);
-    $item->build_mode = NODE_BUILD_RSS;
-    $item->link = url("node/$nid", array('absolute' => TRUE));
-
+    //$item = node_load($nid);
+    // TODO constant: $item->build_mode = NODE_BUILD_RSS;
+		
+    $item->link = url("node/$item->nid", array('absolute' => TRUE));
+  
     if ($item_length != 'title') {
       $teaser = ($item_length == 'teaser') ? TRUE : FALSE;
 
@@ -83,7 +110,7 @@ function pusher_feed($nids = FALSE, $channel = array()) {
       }
 
       // Allow modules to change $node->content before the node is rendered.
-      node_invoke_nodeapi($item, 'view', $teaser, FALSE);
+      module_invoke_all('node_view', $item, 'teaser');
 
       // Set the proper node property, then unset unused $node property so that a
       // bad theme can not open a security hole.
@@ -98,17 +125,25 @@ function pusher_feed($nids = FALSE, $channel = array()) {
       }
 
       // Allow modules to modify the fully-built node.
-      node_invoke_nodeapi($item, 'alter', $teaser, FALSE);
+      module_invoke_all('node_build_alter', $item, $teaser);
     }
 
     // Allow modules to add additional item fields and/or modify $item
-    $extra = node_invoke_nodeapi($item, 'rss item');
-    $extra = array_merge($extra, array(array('key' => 'pubDate', 'value' => gmdate('r', $item->created)), array('key' => 'dc:creator', 'value' => $item->name), array('key' => 'guid', 'value' => $item->nid .' at '. $base_url, 'attributes' => array('isPermaLink' => 'false'))));
+    $extra = module_invoke_all('node_view', $item, 'rss');
+    $extra = array_merge($extra, array(array('key' => 'pubDate', 'value' => gmdate('r', $item->created)), array(
+        'key' => 'dc:creator',
+        'value' => $item->name,
+      ), array(
+        'key' => 'guid',
+        'value' => $item->nid . ' at ' . $base_url,
+        'attributes' => array('isPermaLink' => 'false'),
+      )));
     foreach ($extra as $element) {
       if (isset($element['namespace'])) {
         $namespaces = array_merge($namespaces, $element['namespace']);
       }
     }
+    
 
     // Prepare the item description
     switch ($item_length) {
@@ -118,7 +153,7 @@ function pusher_feed($nids = FALSE, $channel = array()) {
       case 'teaser':
         $item_text = $item->teaser;
         if (!empty($item->readmore)) {
-          $item_text .= '<p>'. l(t('read more'), 'node/'. $item->nid, array('absolute' => TRUE, 'attributes' => array('target' => '_blank'))) .'</p>';
+          $item_text .= '<p>' . l(t('read more'), 'node/' . $item->nid, array('absolute' => TRUE, 'attributes' => array('target' => '_blank'))) . '</p>';
         }
         break;
       case 'title':
@@ -130,18 +165,18 @@ function pusher_feed($nids = FALSE, $channel = array()) {
   }
 
   $channel_defaults = array(
-    'version'     => '2.0',
-    'title'       => variable_get('site_name', 'Drupal'),
-    'link'        => $base_url,
+    'version' => '2.0',
+    'title' => variable_get('site_name', 'Drupal'),
+    'link' => $base_url,
     'description' => variable_get('site_mission', ''),
-    'language'    => $language->language
+    'language' => $language->language,
   );
   $channel = array_merge($channel_defaults, $channel);
 
   $feed_url = url('realtime.xml', array('absolute' => TRUE));
   $hub_url = url('pubsubhubbub/endpoint', array('absolute' => TRUE));
   $output = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-  $output .= "<rss version=\"". $channel["version"] ."\" xml:base=\"". $base_url ."\" ". drupal_attributes($namespaces) .">\n";
+  $output .= "<rss version=\"" . $channel["version"] . "\" xml:base=\"" . $base_url . "\" " . drupal_attributes($namespaces) . ">\n";
   $output .= "<atom:link rel=\"hub\" href=\"$hub_url\" />\n";
   $output .= "<atom:link rel=\"self\" href=\"$feed_url\" />\n";
   $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $items, $channel['language']);
