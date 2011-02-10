@@ -62,117 +62,82 @@ function pusher_feed_page() {
  * Recognize node_feed()?
  *
  * Change: feed_url and hub_url embedding, don't print to screen.
+ *
+ * Atom specific adaptation of node_feed
+ * http://api.drupal.org/api/drupal/modules--node--node.module/function/node_feed/7
  */
 function pusher_feed($nids = FALSE, $channel = array()) {
-  global $base_url, $language;
+global $base_url, $language_content;
 
-/*
   if ($nids === FALSE) {
-    $nids = array();
-    // TODO Please convert this statement to the D7 database API syntax.
-    $result = db_query_range(db_rewrite_sql('SELECT n.nid, n.created FROM {node} n WHERE n.promote = 1 AND n.status = 1 ORDER BY n.created DESC'));
-    while ($row = db_fetch_object($result)) {
-      $nids[] = $row->nid;
-    }
+    $nids = db_select('node', 'n')
+      ->fields('n', array('nid', 'created'))
+      ->condition('n.promote', 1)
+      ->condition('status', 1)
+      ->orderBy('n.created', 'DESC')
+      ->range(0, variable_get('feed_default_items', 10))
+      ->addTag('node_access')
+      ->execute()
+      ->fetchCol();
   }
-*/
-  // TODO filter by $nids
-  $nodes_limit = 10;
-  $nodes = node_get_recent($nodes_limit);
 
-  // TODO feed_item_length meaning = title with/without teaser?
-  $item_length = variable_get('feed_item_length', 'teaser');
-  $namespaces = array(
-    'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
-    'xmlns:atom' => 'http://www.w3.org/2005/Atom',
-  );
+  $item_length = variable_get('feed_item_length', 'fulltext');
+  $namespaces = array('xmlns:dc' => 'http://purl.org/dc/elements/1.1/');
+  $teaser = ($item_length == 'teaser');
 
+  // Load all nodes to be rendered.
+  $nodes = node_load_multiple($nids);
   $items = '';
-	dsm($nodes);
-	dsm($item_length);
-	
-  foreach ($nodes as $item) {
-    // Load the specified node:
-    //$item = node_load($nid);
-    // TODO constant: $item->build_mode = NODE_BUILD_RSS;
-		
-    $item->link = url("node/$item->nid", array('absolute' => TRUE));
-  
-    if ($item_length != 'title') {
-      $teaser = ($item_length == 'teaser') ? TRUE : FALSE;
+  foreach ($nodes as $node) {
+    $item_text = '';
 
-      // Filter and prepare node teaser
-      if (node_hook($item, 'view')) {
-        $item = node_invoke($item, 'view', $teaser, FALSE);
-      }
-      else {
-        $item = node_prepare($item, $teaser);
-      }
-
-      // Allow modules to change $node->content before the node is rendered.
-      module_invoke_all('node_view', $item, 'teaser');
-
-      // Set the proper node property, then unset unused $node property so that a
-      // bad theme can not open a security hole.
-      $content = drupal_render($item->content);
-      if ($teaser) {
-        $item->teaser = $content;
-        unset($item->body);
-      }
-      else {
-        $item->body = $content;
-        unset($item->teaser);
-      }
-
-      // Allow modules to modify the fully-built node.
-      module_invoke_all('node_build_alter', $item, $teaser);
-    }
-
-    // Allow modules to add additional item fields and/or modify $item
-    $extra = module_invoke_all('node_view', $item, 'rss');
-    $extra = array_merge($extra, array(array('key' => 'pubDate', 'value' => gmdate('r', $item->created)), array(
+    $node->link = url("node/$node->nid", array('absolute' => TRUE));
+    $node->rss_namespaces = array();
+    $node->rss_elements = array(
+      array(
+        'key' => 'pubDate',
+        'value' => gmdate('r', $node->created),
+      ),
+      array(
         'key' => 'dc:creator',
-        'value' => $item->name,
-      ), array(
+        'value' => $node->name,
+      ),
+      array(
         'key' => 'guid',
-        'value' => $item->nid . ' at ' . $base_url,
+        'value' => $node->nid . ' at ' . $base_url,
         'attributes' => array('isPermaLink' => 'false'),
-      )));
-    foreach ($extra as $element) {
-      if (isset($element['namespace'])) {
-        $namespaces = array_merge($namespaces, $element['namespace']);
-      }
-    }
-    
+      ),
+    );
 
-    // Prepare the item description
-    switch ($item_length) {
-      case 'fulltext':
-        $item_text = $item->body;
-        break;
-      case 'teaser':
-        $item_text = $item->teaser;
-        if (!empty($item->readmore)) {
-          $item_text .= '<p>' . l(t('read more'), 'node/' . $item->nid, array('absolute' => TRUE, 'attributes' => array('target' => '_blank'))) . '</p>';
-        }
-        break;
-      case 'title':
-        $item_text = '';
-        break;
+    // The node gets built and modules add to or modify $node->rss_elements
+    // and $node->rss_namespaces.
+    $build = node_view($node, 'rss');
+    unset($build['#theme']);
+
+    if (!empty($node->rss_namespaces)) {
+      $namespaces = array_merge($namespaces, $node->rss_namespaces);
     }
 
-    $items .= format_rss_item($item->title, $item->link, $item_text, $extra);
+    if ($item_length != 'title') {
+      // We render node contents and force links to be last.
+      $build['links']['#weight'] = 1000;
+      $item_text .= drupal_render($build);
+    }
+
+    $items .= format_rss_item($node->title, $node->link, $item_text, $node->rss_elements);
   }
 
   $channel_defaults = array(
     'version' => '2.0',
     'title' => variable_get('site_name', 'Drupal'),
     'link' => $base_url,
-    'description' => variable_get('site_mission', ''),
-    'language' => $language->language,
+    'description' => variable_get('feed_description', ''),
+    'language' => $language_content->language,
   );
+  $channel_extras = array_diff_key($channel, $channel_defaults);
   $channel = array_merge($channel_defaults, $channel);
 
+  // Custom atom feeds functionality begin.
   $feed_url = url('realtime.xml', array('absolute' => TRUE));
   $hub_url = url('pubsubhubbub/endpoint', array('absolute' => TRUE));
   $output = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
@@ -181,6 +146,6 @@ function pusher_feed($nids = FALSE, $channel = array()) {
   $output .= "<atom:link rel=\"self\" href=\"$feed_url\" />\n";
   $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $items, $channel['language']);
   $output .= "</rss>\n";
-
   return $output;
+  // Custom atom feeds functionality end.
 }
