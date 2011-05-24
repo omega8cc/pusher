@@ -82,7 +82,10 @@ global $base_url, $language_content;
   }
 
   $item_length = variable_get('feed_item_length', 'fulltext');
-  $namespaces = array('xmlns:dc' => 'http://purl.org/dc/elements/1.1/');
+  $namespaces = array(
+    'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
+    'xmlns:atom' => 'http://www.w3.org/2005/Atom',
+  );
   $teaser = ($item_length == 'teaser');
 
   // Load all nodes to be rendered.
