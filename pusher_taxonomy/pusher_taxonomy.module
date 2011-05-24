@@ -1,0 +1,95 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Enables categorized real-time feeds using PubSubHubbub.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function pusher_taxonomy_menu() {
+  $items['pusher/taxonomy/term/%taxonomy_term/feed'] = array(
+    'title' => 'Taxonomy term',
+    'title callback' => 'taxonomy_term_title',
+    'title arguments' => array(3),
+    'page callback' => 'pusher_taxonomy_term_feed_page',
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Page callback for rendering a term feed.
+ */
+function pusher_taxonomy_term_feed_page($term) {
+  drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
+  print pusher_taxonomy_term_feed($term);
+}
+
+/**
+ * Generate the real-time content feed for a taxonomy term.
+ *
+ * @param $term
+ *   The taxonomy term.
+ */
+function pusher_taxonomy_term_feed($term) {
+  $channel['link'] = url('pusher/taxonomy/term/' . $term->tid, array('absolute' => TRUE));
+  $channel['title'] = variable_get('site_name', 'Drupal') . ' - ' . $term->name;
+  // Only display the description if we have a single term, to avoid clutter and confusion.
+  // HTML will be removed from feed description.
+  $channel['description'] = check_markup($term->description, $term->format, '', TRUE);
+  $nids = taxonomy_select_nodes($term->tid, FALSE, variable_get('feed_default_items', 10));
+
+  return pusher_feed($nids, $channel);
+}
+
+
+//.. TODO: save hooks?
+/*
+
+  module_invoke_all('taxonomy_vocabulary_presave', $vocabulary);
+  module_invoke_all('entity_presave', $vocabulary, 'taxonomy_vocabulary');
+  module_invoke_all('taxonomy_vocabulary_delete', $vocabulary);
+  module_invoke_all('entity_delete', $vocabulary, 'taxonomy_vocabulary');
+  taxonomy_taxonomy_vocabulary_update($vocabulary)
+
+  module_invoke_all('taxonomy_term_presave', $term);
+  module_invoke_all('entity_presave', $term, 'taxonomy_term');
+
+  module_invoke_all("taxonomy_term_$op", $term);
+  module_invoke_all("entity_$op", $term, 'taxonomy_term');
+  module_invoke_all('taxonomy_term_delete', $term);
+  module_invoke_all('entity_delete', $term, 'taxonomy_term');
+*/
+/*
+ * Implements hook_field_insert().
+ *
+function pusher_taxonomy_field_insert($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  //TODO insert?
+}
+
+/**
+ * Implements hook_field_update().
+ *
+function pusher_taxonomy_field_update($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  //TODO PUSH updates?
+}
+
+/**
+ * Implements hook_node_delete().
+ *
+function pusher_taxonomy_node_delete($node) {
+  //TODO: PUSH delete node?
+}
+
+/**
+ * Implements hook_taxonomy_term_delete().
+ *
+function pusher_taxonomy_taxonomy_term_delete($term) {
+  //TODO: PUSH delete feed/subscriptions?
+}
+*/
