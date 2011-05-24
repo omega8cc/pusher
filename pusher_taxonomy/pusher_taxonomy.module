@@ -7,19 +7,10 @@
  */
 
 /**
- * Implements hook_menu().
+ * Implements hook_menu_alter().
  */
-function pusher_taxonomy_menu() {
-  $items['pusher/taxonomy/term/%taxonomy_term/feed'] = array(
-    'title' => 'Taxonomy term',
-    'title callback' => 'taxonomy_term_title',
-    'title arguments' => array(3),
-    'page callback' => 'pusher_taxonomy_term_feed_page',
-    'page arguments' => array(3),
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK,
-  );
-  return $items;
+function pusher_taxonomy_menu_alter(&$items) {
+  $items['taxonomy/term/%taxonomy_term/feed']['page callback'] = 'pusher_taxonomy_term_feed_page';
 }
 
 /**
@@ -37,14 +28,48 @@ function pusher_taxonomy_term_feed_page($term) {
  *   The taxonomy term.
  */
 function pusher_taxonomy_term_feed($term) {
-  $channel['link'] = url('pusher/taxonomy/term/' . $term->tid, array('absolute' => TRUE));
+  $url = 'taxonomy/term/' . $term->tid . '/feed';
+  $channel['link'] = url($url, array('absolute' => TRUE));
   $channel['title'] = variable_get('site_name', 'Drupal') . ' - ' . $term->name;
   // Only display the description if we have a single term, to avoid clutter and confusion.
   // HTML will be removed from feed description.
   $channel['description'] = check_markup($term->description, $term->format, '', TRUE);
   $nids = taxonomy_select_nodes($term->tid, FALSE, variable_get('feed_default_items', 10));
+  return pusher_feed($nids, $channel, $url);
+}
 
-  return pusher_feed($nids, $channel);
+/**
+ * Implements hook_node_insert().
+ */
+function pusher_taxonomy_node_insert($node) {
+  if (TRUE || TRUE) {
+    if ($node->status && $node->promote) {
+
+      // Get all tid for node.
+      $query = db_select('taxonomy_index', 'r');
+      $query->join('taxonomy_term_data', 't', 'r.tid = t.tid');
+      $query->condition('r.nid', $node->nid);
+      $query->fields('r', array('tid'));
+      $tids = $query->execute()->fetchCol(0);
+
+      dpm($tids);
+
+      // Invoke push_hub_notify for each pusher term feed.
+      node_load(NULL, NULL, TRUE);
+      $changed = pusher_feed(array($node->nid));
+      foreach ($tids as $tid) {
+        $url = "taxonomy/term/" . $tid . "/feed";
+        push_hub_notify(url($url, array('absolute' => TRUE)), $changed, TRUE);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function pusher_taxonomy_node_update($node) {
+  pusher_taxonomy_node_insert($node);
 }
 
 

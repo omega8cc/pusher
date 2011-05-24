@@ -1,17 +1,10 @@
 <?php
 
 /**
- * Implements hook_menu().
+ * Implements hook_menu_alter().
  */
-function pusher_menu() {
-  $items = array();
-  $items['realtime.xml'] = array(
-    'title' => 'Realtime RSS feed',
-    'page callback' => 'pusher_feed_page',
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK,
-  );
-  return $items;
+function pusher_menu_alter(&$items) {
+  $items['rss.xml']['page callback'] = 'pusher_feed_page';
 }
 
 /**
@@ -47,7 +40,7 @@ function pusher_nodeapi_OLD($node, $op) { }
 function pusher_notify($nid) {
   node_load(NULL, NULL, TRUE);
   $changed = pusher_feed(array($nid));
-  push_hub_notify(url('realtime.xml', array('absolute' => TRUE)), $changed, TRUE);
+  push_hub_notify(url('rss.xml', array('absolute' => TRUE)), $changed, TRUE);
 }
 
 /**
@@ -66,7 +59,7 @@ function pusher_feed_page() {
  * Atom specific adaptation of node_feed
  * http://api.drupal.org/api/drupal/modules--node--node.module/function/node_feed/7
  */
-function pusher_feed($nids = FALSE, $channel = array()) {
+function pusher_feed($nids = FALSE, $channel = array(), $url = 'rss.xml') {
 global $base_url, $language_content;
 
   if ($nids === FALSE) {
@@ -141,7 +134,7 @@ global $base_url, $language_content;
   $channel = array_merge($channel_defaults, $channel);
 
   // Custom atom feeds functionality begin.
-  $feed_url = url('realtime.xml', array('absolute' => TRUE));
+  $feed_url = url($url, array('absolute' => TRUE));
   $hub_url = url('pubsubhubbub/endpoint', array('absolute' => TRUE));
   $output = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
   $output .= "<rss version=\"" . $channel["version"] . "\" xml:base=\"" . $base_url . "\" " . drupal_attributes($namespaces) . ">\n";
