@@ -138,8 +138,13 @@ global $base_url, $language_content;
   $hub_url = url('pubsubhubbub/endpoint', array('absolute' => TRUE));
   $output = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
   $output .= "<rss version=\"" . $channel["version"] . "\" xml:base=\"" . $base_url . "\" " . drupal_attributes($namespaces) . ">\n";
-  $output .= "<atom:link rel=\"hub\" href=\"$hub_url\" />\n";
-  $output .= "<atom:link rel=\"self\" href=\"$feed_url\" />\n";
+
+  // Add push atom links to channel before items
+  // TODO: Use channel args instead?
+  $pushinfo = "<atom:link rel=\"hub\" href=\"$hub_url\" />\n";
+  $pushinfo .= "<atom:link rel=\"self\" href=\"$feed_url\" />\n";
+  $items = $pushinfo . $items;
+
   $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $items, $channel['language']);
   $output .= "</rss>\n";
   return $output;
