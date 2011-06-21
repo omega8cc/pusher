@@ -52,8 +52,6 @@ function pusher_taxonomy_node_insert($node) {
       $query->fields('r', array('tid'));
       $tids = $query->execute()->fetchCol(0);
 
-      dpm($tids);
-
       // Invoke push_hub_notify for each pusher term feed.
       node_load(NULL, NULL, TRUE);
       $changed = pusher_feed(array($node->nid));
