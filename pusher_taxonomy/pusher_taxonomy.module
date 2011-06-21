@@ -59,6 +59,7 @@ function pusher_taxonomy_node_insert($node) {
         $url = "taxonomy/term/" . $tid . "/feed";
         push_hub_notify(url($url, array('absolute' => TRUE)), $changed, TRUE);
       }
+      pusher_execute_hub_queue();
     }
   }
 }

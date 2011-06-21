@@ -41,7 +41,10 @@ function pusher_notify($nid) {
   node_load(NULL, NULL, TRUE);
   $changed = pusher_feed(array($nid));
   push_hub_notify(url('rss.xml', array('absolute' => TRUE)), $changed, FALSE);
+  pusher_execute_hub_queue();
+}
 
+function pusher_execute_hub_queue() {
   // Manually execute pushhub queue.
   watchdog('pusher', "execute pusher", NULL, WATCHDOG_DEBUG);
   $infos = push_hub_cron_queue_info();
@@ -50,9 +53,10 @@ function pusher_notify($nid) {
   $end = time() + (isset($info['time']) ? $info['time'] : 15);
   $queue = DrupalQueue::get(PUSH_HUB_NOTIFICATIONS_QUEUE);
   while (time() < $end && ($item = $queue->claimItem())) {
-    watchdog('pusher', "other item", NULL, WATCHDOG_DEBUG);
+    watchdog('pusher', "begin push", NULL, WATCHDOG_DEBUG);
     $function($item->data);
     $queue->deleteItem($item);
+    watchdog('pusher', "end push", NULL, WATCHDOG_DEBUG);
   }
 }
 
