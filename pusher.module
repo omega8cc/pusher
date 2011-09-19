@@ -1,40 +1,6 @@
 <?php
 
 /**
- * Implements hook_menu_alter().
- */
-function pusher_menu_alter(&$items) {
-  $items['rss.xml']['page callback'] = 'pusher_feed_page';
-}
-
-/**
- * Implements hook_node_insert().
- */
-function pusher_node_insert($node) {
-  if (TRUE || TRUE) {
-    if ($node->status && $node->promote) {
-      pusher_notify($node->nid);
-    }
-  }
-}
-
-/**
- * Implements hook_node_update().
- */
-function pusher_node_update($node) {
-  if (TRUE || TRUE) {
-    if ($node->status && $node->promote) {
-      pusher_notify($node->nid);
-    }
-  }
-}
-
-/**
- * Implements hook_nodeapi().
- */
-function pusher_nodeapi_OLD($node, $op) { }
-
-/**
  * Send a notification to all subscribers.
  */
 function pusher_notify($nid) {
@@ -58,14 +24,6 @@ function pusher_execute_hub_queue() {
     $queue->deleteItem($item);
     watchdog('pusher', "end push", NULL, WATCHDOG_DEBUG);
   }
-}
-
-/**
- * Page callback for rendering a feed.
- */
-function pusher_feed_page() {
-  drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
-  print pusher_feed();
 }
 
 /**
