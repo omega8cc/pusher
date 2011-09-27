@@ -12,7 +12,7 @@ function pusher_node_menu_alter(&$items) {
  */
 function pusher_node_node_insert($node) {
   if ($node->status && $node->promote) {
-    pusher_notify($node->nid);
+    pusher_notify(array($node->nid));
   }
 }
 
@@ -21,7 +21,7 @@ function pusher_node_node_insert($node) {
  */
 function pusher_node_node_update($node) {
   if ($node->status && $node->promote) {
-    pusher_notify($node->nid);
+    pusher_notify(array($node->nid));
   }
 }
 

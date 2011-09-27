@@ -42,7 +42,7 @@ function pusher_views_feed_node_insert($node) {
       foreach($view->result as $result) {
         if($result->nid == $node->nid) {
           // Push if node in views result.
-          pusher_notify($node->nid);
+          pusher_notify(array($node->nid));
         }
       }
     }

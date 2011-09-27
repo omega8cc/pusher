@@ -3,10 +3,10 @@
 /**
  * Send a notification to all subscribers.
  */
-function pusher_notify($nid) {
+function pusher_notify($nids, $channel = array(), $url = 'rss.xml') {
   node_load(NULL, NULL, TRUE);
-  $changed = pusher_feed(array($nid));
-  push_hub_notify(url('rss.xml', array('absolute' => TRUE)), $changed, FALSE);
+  $changed = pusher_feed($nids, $channel, $url);
+  push_hub_notify(url($url, array('absolute' => TRUE)), $changed, FALSE);
   pusher_execute_hub_queue();
 }
 

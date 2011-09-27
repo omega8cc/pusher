@@ -53,11 +53,9 @@ function pusher_taxonomy_node_insert($node) {
       $tids = $query->execute()->fetchCol(0);
 
       // Invoke push_hub_notify for each pusher term feed.
-      node_load(NULL, NULL, TRUE);
-      $changed = pusher_feed(array($node->nid));
+      $changed = pusher_feed();
       foreach ($tids as $tid) {
-        $url = url("taxonomy/term/" . $tid . "/feed", array('absolute' => TRUE));
-        push_hub_notify($url, $changed, TRUE);
+        pusher_notify(array($node->nid), array(), "taxonomy/term/" . $tid . "/feed");
       }
       //pusher_execute_hub_queue();
     }
