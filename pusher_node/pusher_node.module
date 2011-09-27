@@ -11,10 +11,8 @@ function pusher_node_menu_alter(&$items) {
  * Implements hook_node_insert().
  */
 function pusher_node_node_insert($node) {
-  if (TRUE || TRUE) {
-    if ($node->status && $node->promote) {
-      pusher_notify($node->nid);
-    }
+  if ($node->status && $node->promote) {
+    pusher_notify($node->nid);
   }
 }
 
@@ -22,10 +20,8 @@ function pusher_node_node_insert($node) {
  * Implements hook_node_update().
  */
 function pusher_node_node_update($node) {
-  if (TRUE || TRUE) {
-    if ($node->status && $node->promote) {
-      pusher_notify($node->nid);
-    }
+  if ($node->status && $node->promote) {
+    pusher_notify($node->nid);
   }
 }
 

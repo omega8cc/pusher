@@ -56,10 +56,10 @@ function pusher_taxonomy_node_insert($node) {
       node_load(NULL, NULL, TRUE);
       $changed = pusher_feed(array($node->nid));
       foreach ($tids as $tid) {
-        $url = "taxonomy/term/" . $tid . "/feed";
-        push_hub_notify(url($url, array('absolute' => TRUE)), $changed, TRUE);
+        $url = url("taxonomy/term/" . $tid . "/feed", array('absolute' => TRUE));
+        push_hub_notify($url, $changed, TRUE);
       }
-      pusher_execute_hub_queue();
+      //pusher_execute_hub_queue();
     }
   }
 }
