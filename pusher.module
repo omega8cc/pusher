@@ -12,17 +12,14 @@ function pusher_notify($nids, $channel = array(), $url = 'rss.xml') {
 
 function pusher_execute_hub_queue() {
   // Manually execute pushhub queue.
-  watchdog('pusher', "execute pusher", NULL, WATCHDOG_DEBUG);
   $infos = push_hub_cron_queue_info();
   $info = $infos[PUSH_HUB_NOTIFICATIONS_QUEUE];
   $function = $info['worker callback'];
   $end = time() + (isset($info['time']) ? $info['time'] : 15);
   $queue = DrupalQueue::get(PUSH_HUB_NOTIFICATIONS_QUEUE);
   while (time() < $end && ($item = $queue->claimItem())) {
-    watchdog('pusher', "begin push", NULL, WATCHDOG_DEBUG);
     $function($item->data);
     $queue->deleteItem($item);
-    watchdog('pusher', "end push", NULL, WATCHDOG_DEBUG);
   }
 }
 
