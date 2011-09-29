@@ -15,7 +15,7 @@ function pusher_execute_hub_queue() {
   $infos = push_hub_cron_queue_info();
   $info = $infos[PUSH_HUB_NOTIFICATIONS_QUEUE];
   $function = $info['worker callback'];
-  $end = time() + (isset($info['time']) ? $info['time'] : 15);
+  $end = time() + (isset($info['time']) ? $info['time'] : 1);
   $queue = DrupalQueue::get(PUSH_HUB_NOTIFICATIONS_QUEUE);
   while (time() < $end && ($item = $queue->claimItem())) {
     $function($item->data);

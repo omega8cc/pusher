@@ -42,23 +42,22 @@ function pusher_taxonomy_term_feed($term) {
  * Implements hook_node_insert().
  */
 function pusher_taxonomy_node_insert($node) {
-  if (TRUE || TRUE) {
-    if ($node->status && $node->promote) {
+  if ($node->status) {
+    node_load(NULL, NULL, TRUE);
 
-      // Get all tid for node.
-      $query = db_select('taxonomy_index', 'r');
-      $query->join('taxonomy_term_data', 't', 'r.tid = t.tid');
-      $query->condition('r.nid', $node->nid);
-      $query->fields('r', array('tid'));
-      $tids = $query->execute()->fetchCol(0);
+    // Get all tid for node.
+    $query = db_select('taxonomy_index', 'r');
+    $query->join('taxonomy_term_data', 't', 'r.tid = t.tid');
+    $query->condition('r.nid', $node->nid);
+    $query->fields('r', array('tid'));
+    $tids = $query->execute()->fetchCol(0);
 
-      // Invoke push_hub_notify for each pusher term feed.
-      $changed = pusher_feed();
-      foreach ($tids as $tid) {
-        pusher_notify(array($node->nid), array(), "taxonomy/term/" . $tid . "/feed");
-      }
-      //pusher_execute_hub_queue();
+    // Invoke push_hub_notify for each pusher term feed.
+    $changed = pusher_feed();
+    foreach ($tids as $tid) {
+      pusher_notify(array($node->nid), array(), "taxonomy/term/" . $tid . "/feed");
     }
+    //pusher_execute_hub_queue();
   }
 }
 
